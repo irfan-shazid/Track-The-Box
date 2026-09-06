@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% load money %}
+
+{% block title %}{{ month|date:"F Y" }} &middot; Expense Tracker{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div class="page-head-text">
+    <p class="eyebrow">Dashboard</p>
+    <h1>{{ month|date:"F Y" }}</h1>
+    <p class="muted">
+      {% if expense_count %}
+        {{ expense_count }} expense{{ expense_count|pluralize }}
+        {% if is_current_month %}&middot; {{ days_left }} day{{ days_left|pluralize }} left in the month{% endif %}
+      {% else %}
+        Nothing logged yet
+      {% endif %}
+    </p>
+  </div>
+
+  <div class="month-nav">
+    <a class="icon-btn" href="?month={{ prev_month_key }}" aria-label="Previous month"><svg><use href="#i-left"/></svg></a>
+    <form method="get" class="month-picker">
+      <select name="month" onchange="this.form.submit()" class="input" aria-label="Jump to month">
+        <option value="{{ month_key }}" selected>{{ month|date:"F Y" }}</option>
+        {% for m in available_months %}
+          {% if m.key != month_key %}<option value="{{ m.key }}">{{ m.date|date:"F Y" }}</option>{% endif %}
+        {% endfor %}
+      </select>
+      <noscript><button class="btn" type="submit">Go</button></noscript>
+    </form>
+    <a class="icon-btn" href="?month={{ next_month_key }}" aria-label="Next month"><svg><use href="#i-right"/></svg></a>
+  </div>
+</div>
+
+<section class="hero card">
+  <div class="hero-main">
+    <p class="stat-label">Total spent</p>
+    <p class="hero-value">{{ current_total|money }}</p>
+    <div class="hero-delta">
+      {% if delta_pct is None %}
+        <span class="muted">No spending in {{ prev_month|date:"F" }} to compare against</span>
+      {% elif delta > 0 %}
+        <span class="pill pill-up"><svg class="pill-arrow"><use href="#i-right"/></svg>{{ delta_pct_abs }}%</span>
+        <span class="muted">{{ delta_abs|money }} more than {{ prev_month|date:"F" }}</span>
+      {% elif delta < 0 %}
+        <span class="pill pill-down"><svg class="pill-arrow"><use href="#i-right"/></svg>{{ delta_pct_abs }}%</span>
+        <span class="muted">{{ delta_abs|money }} less than {{ prev_month|date:"F" }}</span>
+      {% else %}
+        <span class="pill pill-flat">No change</span>
+        <span class="muted">same as {{ prev_month|date:"F" }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <dl class="hero-side">
+    <div>
+      <dt>Per day{% if is_current_month %} so far{% endif %}</dt>
+      <dd class="mono">{{ daily_average|money }}</dd>
+    </div>
+    {% if projected is not None %}
+      <div>
+        <dt>Projected month end</dt>
+        <dd class="mono">{{ projected|money }}</dd>
+      </div>
+    {% else %}
+      <div>
+        <dt>{{ prev_month|date:"F" }} total</dt>
+        <dd class="mono">{{ previous_total|money }}</dd>
+      </div>
+    {% endif %}
+    <div>
+      <dt>Largest single expense</dt>
+      <dd class="truncate">
+        {% if largest %}<span class="mono">{{ largest.amount|money }}</span> <span class="muted">&middot; {{ largest.name }}</span>
+        {% else %}<span class="muted">&mdash;</span>{% endif %}
+      </dd>
+    </div>
+  </dl>
+</section>
+
+<div class="two-col">
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title">By category</h2>
+      {% if top_category %}<span class="muted">{{ breakdown|length }} in use</span>{% endif %}
+    </div>
+
+    {% if breakdown %}
+      <ul class="breakdown">
+        {% for row in breakdown %}
+          <li class="breakdown-row">
+            <a class="breakdown-link" href="{% url 'expense_list' %}?month={{ month_key }}">
+              <span class="breakdown-name"><span class="dot" style="background: {{ row.color }}"></span>{{ row.name }}</span>
+              <span class="breakdown-amount mono">{{ row.total|money }}</span>
+            </a>
+            <div class="breakdown-meter">
+              <span class="meter"><span style="width: {{ row.pct }}%; background: {{ row.color }}"></span></span>
+              <span class="breakdown-pct mono-sm">{{ row.pct }}%</span>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+      <div class="breakdown-total">
+        <span>Total</span><span class="mono">{{ current_total|money }}</span>
+      </div>
+    {% else %}
+      <div class="empty">
+        <svg class="empty-icon"><use href="#i-empty"/></svg>
+        <p>No expenses in {{ month|date:"F Y" }}.</p>
+        <a class="btn btn-primary" href="{% url 'expense_create' %}?month={{ month_key }}">
+          <svg><use href="#i-plus"/></svg>Add the first one
+        </a>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title">Last 6 months</h2>
+      <span class="muted">dashed line = average</span>
+    </div>
+    <div class="chart-wrap"><canvas id="monthlyChart"></canvas></div>
+  </section>
+</div>
+
+{% if recent %}
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title">Recent in {{ month|date:"F" }}</h2>
+      <a class="text-link" href="{% url 'expense_list' %}?month={{ month_key }}">View all {{ expense_count }} &rarr;</a>
+    </div>
+    <ul class="feed">
+      {% for expense in recent %}
+        <li>
+          <a class="feed-row" href="{% url 'expense_edit' expense.pk %}">
+            <span class="feed-date mono-sm">{{ expense.date|date:"d M" }}</span>
+            <span class="feed-name">
+              {{ expense.name }}
+              <span class="tag" style="--tag: {{ expense.category.color }}">{{ expense.category.name }}</span>
+            </span>
+            <span class="feed-amount mono">{{ expense.amount|money }}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}
+
+{{ chart_labels|json_script:"chart-labels" }}
+{{ chart_values|json_script:"chart-values" }}
+<span id="chart-currency" hidden>{% currency_symbol %}</span>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  (function () {
+    var canvas = document.getElementById('monthlyChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    var labels = JSON.parse(document.getElementById('chart-labels').textContent);
+    // Amounts ship as strings to keep Decimal precision intact out of Python;
+    // Chart.js needs numbers, so convert only at draw time.
+    var values = JSON.parse(document.getElementById('chart-values').textContent).map(Number);
+    var symbol = document.getElementById('chart-currency').textContent.trim();
+
+    // Read the palette off the stylesheet so the chart follows light/dark.
+    var css = getComputedStyle(document.documentElement);
+    var v = function (name, fallback) { return (css.getPropertyValue(name) || fallback).trim(); };
+    var accent = v('--accent', '#2563eb');
+    var soft = v('--chart-soft', '#bfdbfe');
+    var grid = v('--border', '#e2e8f0');
+    var muted = v('--text-muted', '#64748b');
+
+    var money = function (n) {
+      return symbol + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+    var compact = function (n) {
+      if (n >= 1000) return symbol + (n / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 }) + 'k';
+      return symbol + n.toLocaleString();
+    };
+
+    var months = values.filter(function (n) { return n > 0; });
+    var mean = months.length ? months.reduce(function (a, b) { return a + b; }, 0) / months.length : 0;
+
+    new Chart(canvas, {
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            type: 'bar',
+            data: values,
+            backgroundColor: labels.map(function (_, i) { return i === labels.length - 1 ? accent : soft; }),
+            hoverBackgroundColor: accent,
+            borderRadius: 8,
+            borderSkipped: false,
+            maxBarThickness: 54,
+            order: 2
+          },
+          {
+            // Average of the months that actually have spending, so a run of
+            // empty months doesn't drag the reference line to nothing.
+            type: 'line',
+            data: labels.map(function () { return mean; }),
+            borderColor: muted,
+            borderWidth: 1.5,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            fill: false,
+            order: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 500 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            filter: function (item) { return item.datasetIndex === 0; },
+            displayColors: false,
+            padding: 10,
+            callbacks: {
+              label: function (ctx) { return money(ctx.parsed.y); }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, border: { display: false }, ticks: { color: muted, font: { size: 11 } } },
+          y: {
+            beginAtZero: true,
+            border: { display: false },
+            grid: { color: grid, drawTicks: false },
+            ticks: { color: muted, font: { size: 11 }, padding: 8, maxTicksLimit: 5, callback: function (n) { return compact(Number(n)); } }
+          }
+        }
+      }
+    });
+  })();
+</script>
+{% endblock %}

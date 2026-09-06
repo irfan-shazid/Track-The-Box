@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load money %}
+
+{% block title %}Delete expense &middot; Expense Tracker{% endblock %}
+
+{% block content %}
+<div class="narrow">
+  <div class="card danger-card">
+    <div class="danger-icon"><svg><use href="#i-trash"/></svg></div>
+    <h1>Delete this expense?</h1>
+    <p class="muted">This can&rsquo;t be undone.</p>
+
+    <dl class="summary">
+      <dt>Date</dt><dd>{{ expense.date|date:"l, j F Y" }}</dd>
+      <dt>Name</dt><dd>{{ expense.name }}</dd>
+      <dt>Category</dt><dd><span class="tag" style="--tag: {{ expense.category.color }}">{{ expense.category.name }}</span></dd>
+      <dt>Amount</dt><dd class="mono summary-amount">{{ expense.amount|money }}</dd>
+      {% if expense.note %}<dt>Note</dt><dd>{{ expense.note }}</dd>{% endif %}
+    </dl>
+
+    <form method="post" class="form-actions">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger btn-lg">Yes, delete it</button>
+      <a class="btn btn-ghost" href="{{ expense.get_absolute_url }}">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

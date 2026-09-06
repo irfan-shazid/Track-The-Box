@@ -1,0 +1,2 @@
+# Vercel runs build_files.sh in a Linux container -- CRLF would break the shebang.
+*.sh text eol=lf

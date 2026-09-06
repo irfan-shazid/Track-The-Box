@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load money %}
+
+{% block title %}{{ title }} &middot; Expense Tracker{% endblock %}
+
+{% block content %}
+<div class="narrow">
+  <div class="page-head">
+    <div class="page-head-text">
+      <p class="eyebrow">{% if expense %}Editing{% else %}New{% endif %}</p>
+      <h1>{{ title }}</h1>
+    </div>
+    {% if expense %}
+      <a class="btn btn-ghost" href="{{ expense.get_absolute_url }}">
+        <svg><use href="#i-left"/></svg>{{ expense.date|date:"F Y" }}
+      </a>
+    {% else %}
+      <a class="btn btn-ghost" href="{% url 'expense_list' %}"><svg><use href="#i-left"/></svg>Back</a>
+    {% endif %}
+  </div>
+
+  <form class="card form" method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <p class="form-error-banner">{{ form.non_field_errors|join:" " }}</p>
+    {% endif %}
+
+    <div class="field">
+      <label for="{{ form.name.id_for_label }}">Name</label>
+      {{ form.name }}
+      {% for error in form.name.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </div>
+
+    <div class="form-row">
+      <div class="field">
+        <label for="{{ form.amount.id_for_label }}">Amount</label>
+        <div class="input-affix">
+          <span class="affix">{% currency_symbol %}</span>
+          {{ form.amount }}
+        </div>
+        {% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      </div>
+      <div class="field">
+        <label for="{{ form.date.id_for_label }}">Date</label>
+        {{ form.date }}
+        {% for error in form.date.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="{{ form.category.id_for_label }}">Category</label>
+      {{ form.category }}
+      {% for error in form.category.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </div>
+
+    {% if form.note %}
+      <div class="field">
+        <label for="{{ form.note.id_for_label }}">Note <span class="label-hint">optional</span></label>
+        {{ form.note }}
+        {% for error in form.note.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary btn-lg">{{ submit_label }}</button>
+      {% if expense %}
+        <a class="btn btn-danger-ghost" href="{% url 'expense_delete' expense.pk %}">
+          <svg><use href="#i-trash"/></svg>Delete
+        </a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

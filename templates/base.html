@@ -1,0 +1,120 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)">
+  <title>{% block title %}Expense Tracker{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128176;</text></svg>">
+</head>
+<body{% if not user.is_authenticated %} class="no-chrome"{% endif %}>
+
+{# One sprite, referenced by <use> everywhere. Cheaper than repeating paths. #}
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 3v16a2 2 0 0 0 2 2h16"/><rect x="7" y="12" width="3" height="6" rx="1"/><rect x="13" y="8" width="3" height="10" rx="1"/><rect x="19" y="4" width="0" height="0"/>
+  </symbol>
+  <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+  </symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 5v14M5 12h14"/>
+  </symbol>
+  <symbol id="i-out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+  </symbol>
+  <symbol id="i-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v2"/><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H5a2 2 0 0 1-2-2Z"/><circle cx="17" cy="14" r="1.2" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-empty" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5Z"/><path d="M3 7.5 12 12l9-4.5M12 12v9" opacity=".45"/></symbol>
+</svg>
+
+{% if user.is_authenticated %}
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="{% url 'dashboard' %}">
+        <span class="brand-mark"><svg><use href="#i-wallet"/></svg></span>
+        <span class="brand-text">Expense&nbsp;Tracker</span>
+      </a>
+
+      <nav class="nav" aria-label="Main">
+        <a href="{% url 'dashboard' %}" {% if request.resolver_match.url_name == 'dashboard' %}class="active" aria-current="page"{% endif %}>
+          <svg><use href="#i-chart"/></svg><span>Dashboard</span>
+        </a>
+        <a href="{% url 'expense_list' %}" {% if request.resolver_match.url_name == 'expense_list' %}class="active" aria-current="page"{% endif %}>
+          <svg><use href="#i-list"/></svg><span>Expenses</span>
+        </a>
+      </nav>
+
+      <div class="topbar-end">
+        <a class="btn btn-primary btn-add" href="{% url 'expense_create' %}">
+          <svg><use href="#i-plus"/></svg><span>Add expense</span>
+        </a>
+        <form class="logout-form" method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="icon-btn" title="Log out {{ user.get_username }}" aria-label="Log out">
+            <svg><use href="#i-out"/></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+  </header>
+{% endif %}
+
+<main class="page">
+  {% if messages %}
+    <div class="messages" role="status" aria-live="polite">
+      {% for message in messages %}
+        <div class="message message-{{ message.tags|default:'info' }}">
+          <span>{{ message }}</span>
+          <button type="button" class="message-close" aria-label="Dismiss">
+            <svg><use href="#i-x"/></svg>
+          </button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+</main>
+
+{% if user.is_authenticated %}
+  {# Phone-only bottom bar. Adding an expense one-handed is the whole point. #}
+  <nav class="tabbar" aria-label="Main">
+    <a href="{% url 'dashboard' %}" {% if request.resolver_match.url_name == 'dashboard' %}class="active" aria-current="page"{% endif %}>
+      <svg><use href="#i-chart"/></svg><span>Dashboard</span>
+    </a>
+    <a class="tabbar-add" href="{% url 'expense_create' %}" aria-label="Add expense">
+      <svg><use href="#i-plus"/></svg>
+    </a>
+    <a href="{% url 'expense_list' %}" {% if request.resolver_match.url_name == 'expense_list' %}class="active" aria-current="page"{% endif %}>
+      <svg><use href="#i-list"/></svg><span>Expenses</span>
+    </a>
+  </nav>
+{% endif %}
+
+<script>
+  // Toasts: dismiss on click, and fade the successes out on their own. Errors
+  // stay until dismissed -- they usually need reading twice.
+  document.addEventListener('click', function (e) {
+    var close = e.target.closest('.message-close');
+    if (close) close.parentElement.remove();
+  });
+  document.querySelectorAll('.message-success').forEach(function (el) {
+    setTimeout(function () {
+      el.classList.add('message-leaving');
+      setTimeout(function () { el.remove(); }, 400);
+    }, 4200);
+  });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
