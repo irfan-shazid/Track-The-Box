@@ -200,6 +200,20 @@ def dashboard(request):
 
     budget = budget_status(current, current_total)
 
+    # All-time records, not scoped to the month being viewed -- "highest" and
+    # "lowest" only mean something across the whole history. Reused for the
+    # month picker below, so this is one query, not two.
+    all_months = months_with_data()
+    highest_month = lowest_month = None
+    if len(all_months) >= 2:
+        highest_month = max(all_months, key=lambda m: m["total"])
+        lowest_month = min(all_months, key=lambda m: m["total"])
+        # Every month tied at the same total (e.g. exactly two months, equal
+        # spend) would make "highest" and "lowest" the same month, which reads
+        # as a bug rather than a coincidence -- so just don't claim a record.
+        if highest_month["key"] == lowest_month["key"]:
+            highest_month = lowest_month = None
+
     return render(
         request,
         "expenses/dashboard.html",
@@ -223,9 +237,11 @@ def dashboard(request):
             "largest": largest,
             "recent": recent,
             "budget": budget,
+            "highest_month": highest_month,
+            "lowest_month": lowest_month,
             "chart_labels": chart_labels,
             "chart_values": chart_values,
-            "available_months": months_with_data(),
+            "available_months": all_months,
         },
     )
 

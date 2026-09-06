@@ -65,6 +65,24 @@
         {% else %}<span class="muted">&mdash;</span>{% endif %}
       </dd>
     </div>
+    {% if highest_month %}
+      <div class="hero-stat-row">
+        <dt>Highest spending month</dt>
+        <dd class="truncate">
+          <a class="hero-stat-link" href="?month={{ highest_month.key }}">
+            <span class="mono">{{ highest_month.total|money }}</span> <span class="muted">&middot; {{ highest_month.date|date:"M Y" }}</span>
+          </a>
+        </dd>
+      </div>
+      <div class="hero-stat-row">
+        <dt>Lowest spending month</dt>
+        <dd class="truncate">
+          <a class="hero-stat-link" href="?month={{ lowest_month.key }}">
+            <span class="mono">{{ lowest_month.total|money }}</span> <span class="muted">&middot; {{ lowest_month.date|date:"M Y" }}</span>
+          </a>
+        </dd>
+      </div>
+    {% endif %}
   </dl>
 
   <section class="budget budget-{{ budget.state|default:'none' }}">

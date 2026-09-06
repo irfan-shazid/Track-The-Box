@@ -324,6 +324,27 @@ svg:not(.sprite) { width: 1.05em; height: 1.05em; flex: none; display: block; }
 .hero-side dd { margin: 0; font-weight: 600; min-width: 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hero-side .muted { font-weight: 400; }
 
+/* Highest/lowest month jump straight to that month. The row grows a touch of
+   padding so the tap target is bigger than the text alone, and the ::after
+   "stretched link" makes the whole row clickable -- not just the figure --
+   without nesting an <a> around the dt/dd pair, which would break the dl's
+   definition-list semantics for assistive tech. */
+.hero-stat-row {
+  position: relative;
+  align-items: center;
+  padding-block: .3rem;
+  margin-inline: -.4rem;
+  padding-inline: .4rem;
+  border-radius: var(--radius-sm);
+}
+/* Separate rules, not a comma-joined selector list: an unsupported :has() in
+   a shared list would drop the whole rule, taking the plain :hover with it. */
+.hero-stat-row:hover { background: var(--surface-2); }
+.hero-stat-row:has(:focus-visible) { background: var(--surface-2); }
+.hero-stat-link { color: var(--text); }
+.hero-stat-link:hover { color: var(--accent); text-decoration: none; }
+.hero-stat-link::after { content: ""; position: absolute; inset: 0; }
+
 /* ============================================================== layout === */
 
 .two-col { display: grid; gap: 1rem; align-items: start; }
