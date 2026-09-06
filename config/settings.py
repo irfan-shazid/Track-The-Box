@@ -196,6 +196,20 @@ STORAGES = {
 }
 WHITENOISE_AUTOREFRESH = DEBUG
 
+# Belt and braces for static files.
+#
+# Normally Vercel serves /static/* straight off the CDN from the static build,
+# and the request never reaches this function. But vercel.json routes with
+# "handle": "filesystem", so anything the CDN does *not* have falls through to
+# here -- and USE_FINDERS lets WhiteNoise serve it from STATICFILES_DIRS and the
+# app static dirs (Django admin included) without a collectstatic having run.
+#
+# So a broken or skipped static build degrades to slightly slower static files
+# instead of an unstyled site. Files served this way miss the long-lived cache
+# headers that hashed, collected files get, which is why the static build is
+# still the primary path.
+WHITENOISE_USE_FINDERS = True
+
 
 # --------------------------------------------------------------------------
 # App settings

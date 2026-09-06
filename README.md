@@ -123,14 +123,22 @@ python manage.py createsuperuser
 
 `vercel.json` defines two builds:
 
-- `config/wsgi.py` via `@vercel/python` — the Django app itself, as a serverless function. It exports both `application` and `app`, since different runtime versions look for different names.
+- `config/wsgi.py` via `@vercel/python` — the Django app itself, as a serverless function. It exports both `application` and `app`, since different runtime versions look for different names. `includeFiles` pulls in `templates/` and `static/`, which nothing imports and which the bundler would otherwise leave out.
 - `build_files.sh` via `@vercel/static-build` — runs `collectstatic` into `staticfiles_build/`, which Vercel publishes to its CDN.
 
-The routes send `/static/*` to the CDN output and everything else to the function, so static files never cost you a function invocation. `STATIC_ROOT` is `staticfiles_build/static/` so the collected paths line up with the `/static/` route.
+Routing is `{ "handle": "filesystem" }` followed by a catch-all to the function. Vercel tries the CDN files first, so `/static/*` normally costs no function invocation; anything the CDN does not have falls through to Django.
 
-WhiteNoise stays in the middleware stack for local `DEBUG=False` runs. Note the static storage backend is `CompressedStaticFilesStorage`, **not** the `Manifest` variant — the manifest would live in the CDN output that the serverless function never sees, so hashed lookups would fail at runtime.
+**Static files have a deliberate fallback.** `WHITENOISE_USE_FINDERS = True` lets WhiteNoise serve straight from `STATICFILES_DIRS` and the app static dirs (Django admin included) with no `collectstatic` having run. Combined with the filesystem route above, a broken or skipped static build degrades to slightly slower static files rather than an unstyled site. Files served that way miss the long-lived cache headers collected files get, which is why the static build is still the primary path.
+
+The storage backend is `CompressedStaticFilesStorage`, **not** the `Manifest` variant — the manifest would live in the CDN output that the serverless function never sees, so hashed lookups would fail at runtime.
 
 Python version is pinned to 3.12 in `.python-version` and in `vercel.json`.
+
+#### Two things the build log will say
+
+**`WARNING! Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply.`** — expected and harmless. `vercel.json` intentionally owns the build; the dashboard's Build Command / Output Directory fields are simply unused.
+
+**`error: externally-managed-environment`** — this is what a naive `pip install -r requirements.txt` hits. Vercel's build image marks its system Python as externally managed (PEP 668), so pip refuses to install into it. `build_files.sh` creates a throwaway venv and installs there, falling back to `--break-system-packages` if the image has no venv module. The script also exports placeholder values for `SECRET_KEY` and `DATABASE_URL` before running `collectstatic`, so the static build does not depend on environment variables being exposed to it — neither value is used to produce any output, and neither reaches the runtime.
 
 ### After deploying
 
