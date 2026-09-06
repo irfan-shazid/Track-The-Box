@@ -55,23 +55,9 @@
 
   <dl class="hero-side">
     <div>
-      <dt>Per day{% if is_current_month %} so far{% endif %}</dt>
-      <dd class="mono">{{ daily_average|money }}</dd>
+      <dt>{{ prev_month|date:"F" }} total</dt>
+      <dd class="mono">{{ previous_total|money }}</dd>
     </div>
-    {% if projected is not None %}
-      <div>
-        <dt>Projected month end</dt>
-        <dd class="mono">
-          {{ projected|money }}
-          {% if projected_over %}<span class="hint-over">&nbsp;{{ projected_over|money }} over target</span>{% endif %}
-        </dd>
-      </div>
-    {% else %}
-      <div>
-        <dt>{{ prev_month|date:"F" }} total</dt>
-        <dd class="mono">{{ previous_total|money }}</dd>
-      </div>
-    {% endif %}
     <div>
       <dt>Largest single expense</dt>
       <dd class="truncate">

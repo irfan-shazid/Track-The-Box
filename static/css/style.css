@@ -709,9 +709,6 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: .55; }
 .budget-empty-hint { margin: .15rem 0 0; font-size: .84rem; }
 .budget-empty .btn { width: 100%; }
 
-/* "…12.00 over target" trailing the projection figure. */
-.hint-over { color: var(--up); font-family: var(--sans); font-size: .78rem; font-weight: 600; }
-
 /* The same figure, condensed, on the expenses list banner. */
 .total-banner-budget {
   flex-basis: 100%;

@@ -189,27 +189,16 @@ def dashboard(request):
     month_expenses = Expense.objects.filter(date__gte=cur_start, date__lt=cur_end)
     expense_count = month_expenses.count()
 
-    # Burn rate. For the month in progress, "per day" means per day *so far* —
-    # dividing October's spend by 31 on the 3rd would be meaningless.
     today = timezone.localdate()
     days_in_month = calendar.monthrange(current.year, current.month)[1]
     is_current_month = month_start(today) == current
     days_elapsed = today.day if is_current_month else days_in_month
-
-    daily_average = q2(current_total / days_elapsed) if days_elapsed else ZERO
-    # Straight-line projection to month end, only while the month is still open.
-    projected = q2(daily_average * days_in_month) if is_current_month else None
     days_left = days_in_month - days_elapsed if is_current_month else 0
 
     largest = month_expenses.select_related("category").order_by("-amount").first()
     recent = month_expenses.select_related("category")[:5]
 
     budget = budget_status(current, current_total)
-    # Only meaningful while the month is open: the straight-line projection
-    # says you will finish over target even though you are not over it yet.
-    projected_over = None
-    if budget and projected is not None and not budget["over"] and projected > budget["target"]:
-        projected_over = q2(projected - budget["target"])
 
     return render(
         request,
@@ -230,15 +219,10 @@ def dashboard(request):
             "breakdown": breakdown,
             "top_category": top,
             "expense_count": expense_count,
-            "daily_average": daily_average,
-            "projected": projected,
-            "days_elapsed": days_elapsed,
             "days_left": days_left,
-            "days_in_month": days_in_month,
             "largest": largest,
             "recent": recent,
             "budget": budget,
-            "projected_over": projected_over,
             "chart_labels": chart_labels,
             "chart_values": chart_values,
             "available_months": months_with_data(),
