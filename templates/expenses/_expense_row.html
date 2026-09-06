@@ -1,0 +1,20 @@
+{% load money %}
+{# One expense row. The link covers the whole row so a thumb can hit it
+   anywhere; delete sits outside the link, since anchors can't nest. #}
+<li class="row">
+  <a class="row-link{% if show_date %} row-link-dated{% endif %}" href="{% url 'expense_edit' expense.pk %}">
+    {% if show_date %}<span class="row-date mono-sm">{{ expense.date|date:"d M" }}</span>{% endif %}
+    <span class="row-main">
+      <span class="row-name">{{ expense.name }}</span>
+      <span class="row-meta">
+        <span class="tag" style="--tag: {{ expense.category.color }}">{{ expense.category.name }}</span>
+        {% if expense.note %}<span class="note-flag" title="{{ expense.note }}">note</span>{% endif %}
+      </span>
+    </span>
+    <span class="row-amount mono">{{ expense.amount|money }}</span>
+  </a>
+  <a class="icon-btn icon-btn-danger row-delete" href="{% url 'expense_delete' expense.pk %}"
+     aria-label="Delete {{ expense.name }}">
+    <svg><use href="#i-trash"/></svg>
+  </a>
+</li>

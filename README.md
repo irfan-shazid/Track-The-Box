@@ -21,9 +21,20 @@ Everything sits behind `@login_required`. There is no signup page by design — 
 
 ### Interface
 
-Plain CSS in a single stylesheet, no framework. Every colour is a custom property defined once at the top of `static/css/style.css`, with a dark palette swapped in under `prefers-color-scheme: dark` — the app gets opened on a phone at night. The Chart.js bar chart reads the same custom properties at draw time, so it follows the theme too.
+Plain CSS in a single stylesheet, no framework, **written mobile-first**: everything outside a media query *is* the phone layout, and two `min-width` blocks (600px, 900px) add the tablet and desktop arrangements on top. There are no `max-width` queries. Every colour is a custom property defined once, with a full dark palette swapped in under `prefers-color-scheme: dark`; the Chart.js bar chart reads those same properties at draw time, so it follows the theme too.
 
-Phone layout is a first-class case, not an afterthought: the top nav collapses to a bottom tab bar with a floating add button, list rows reflow from a grid into stacked cards, and inputs are 16px so iOS doesn't zoom the page on focus. Amounts are always monospace with tabular figures so digits line up down a column. Icons are one inline SVG sprite referenced with `<use>` — no icon font, no extra request.
+What the phone layout actually does:
+
+- **Navigation lives at the bottom.** A fixed tab bar with a raised add button sits in thumb reach; the desktop top-bar nav only appears at 900px. Both are the same markup — no duplicated links.
+- **A whole expense row is one tap target.** The row is a link to its edit page with a `44px` minimum height; delete sits outside that link as a sibling, since anchors can't nest.
+- **Filters collapse behind a toggle** and auto-expand when a filter is already active, so a filtered list never looks unexplained. It's a checkbox rather than `<details>`, because a media query can force a checkbox panel open at 600px and can't do that reliably with `<details>`.
+- **The running total sits above the fold**, before the quick-add form, since on a phone it's the first thing you want.
+- **Day headers stick** below the top bar (`top: var(--topbar-h)`) so you always know which day you're scrolling through.
+- **Safe-area insets** are respected top, bottom, left and right, so the tab bar clears the home indicator and nothing hides under a notch in landscape.
+- **44px minimum touch targets** everywhere via a `--tap` token, relaxed to 38px only at desktop width.
+- **Inputs are pinned to 16px** — anything smaller makes iOS zoom the page on focus — and the big figures use `clamp()` so a five-digit total still fits a 320px screen.
+
+Amounts are always monospace with tabular figures so digits line up down a column. Icons are one inline SVG sprite referenced with `<use>` — no icon font, no extra request. Pinch-zoom is deliberately left enabled.
 
 ---
 

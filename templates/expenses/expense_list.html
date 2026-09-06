@@ -8,10 +8,6 @@
   <div class="page-head-text">
     <p class="eyebrow">Expenses</p>
     <h1>{{ month|date:"F Y" }}</h1>
-    <p class="muted">
-      {{ count }} expense{{ count|pluralize }}{% if is_filtered %} matching{% endif %}
-      &middot; <strong class="mono total-inline">{{ total|money }}</strong>
-    </p>
   </div>
 
   <div class="month-nav">
@@ -19,6 +15,8 @@
     <form method="get" class="month-picker">
       {% if search %}<input type="hidden" name="q" value="{{ search }}">{% endif %}
       {% if selected_category %}<input type="hidden" name="category" value="{{ selected_category }}">{% endif %}
+      {% if sort != 'date' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+      {% if direction != 'desc' %}<input type="hidden" name="dir" value="{{ direction }}">{% endif %}
       <select name="month" onchange="this.form.submit()" class="input" aria-label="Jump to month">
         <option value="{{ month_key }}" selected>{{ month|date:"F Y" }}</option>
         {% for m in available_months %}
@@ -31,15 +29,21 @@
   </div>
 </div>
 
+{# Running total for whatever is currently filtered. On a phone this is the
+   first thing you want to see, so it sits above the fold, before the form. #}
+<div class="total-banner">
+  <span class="total-banner-label">
+    {% if is_filtered %}Filtered total{% else %}Total this month{% endif %}
+    <span class="muted">&middot; {{ count }} expense{{ count|pluralize }}</span>
+  </span>
+  <span class="total-banner-value mono">{{ total|money }}</span>
+</div>
+
 {# Quick add. Logging something in three seconds is the whole point of the app. #}
 <form class="card quick-add" method="post" action="{% url 'expense_create' %}">
   {% csrf_token %}
   <input type="hidden" name="quick" value="1">
   <div class="quick-grid">
-    <div class="field field-date">
-      <label for="{{ quick_form.date.id_for_label }}">Date</label>
-      {{ quick_form.date }}
-    </div>
     <div class="field field-name">
       <label for="{{ quick_form.name.id_for_label }}">What did you spend on?</label>
       {{ quick_form.name }}
@@ -47,6 +51,10 @@
     <div class="field field-amount">
       <label for="{{ quick_form.amount.id_for_label }}">Amount ({% currency_symbol %})</label>
       {{ quick_form.amount }}
+    </div>
+    <div class="field field-date">
+      <label for="{{ quick_form.date.id_for_label }}">Date</label>
+      {{ quick_form.date }}
     </div>
     <div class="field field-category">
       <label for="{{ quick_form.category.id_for_label }}">Category</label>
@@ -59,32 +67,45 @@
   <p class="quick-hint muted">Need a note? Use the <a href="{% url 'expense_create' %}?month={{ month_key }}">full form</a>.</p>
 </form>
 
-<form class="toolbar card" method="get">
-  <input type="hidden" name="month" value="{{ month_key }}">
-  {% if sort != 'date' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
-  {% if direction != 'desc' %}<input type="hidden" name="dir" value="{{ direction }}">{% endif %}
+{# Filters collapse behind a toggle on phones and are always open from tablet
+   up. A checkbox rather than <details> so a media query can force it open. #}
+<input type="checkbox" id="filters-toggle" class="filters-toggle" {% if is_filtered %}checked{% endif %}>
+<div class="filters-block">
+  <label for="filters-toggle" class="filters-summary btn">
+    <svg><use href="#i-search"/></svg>
+    <span>Search &amp; filter</span>
+    {% if is_filtered %}<span class="filters-badge">on</span>{% endif %}
+    <svg class="filters-chevron"><use href="#i-right"/></svg>
+  </label>
 
-  <div class="search-field">
-    <svg class="search-icon"><use href="#i-search"/></svg>
-    <input type="search" name="q" value="{{ search }}" class="input" placeholder="Search name or note&hellip;" aria-label="Search">
-  </div>
+  <form class="toolbar card" method="get">
+    <input type="hidden" name="month" value="{{ month_key }}">
+    {% if sort != 'date' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+    {% if direction != 'desc' %}<input type="hidden" name="dir" value="{{ direction }}">{% endif %}
 
-  <select name="category" class="input toolbar-select" aria-label="Filter by category">
-    <option value="">All categories</option>
-    {% for category in categories %}
-      <option value="{{ category.pk }}" {% if selected_category == category.pk|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
-    {% endfor %}
-  </select>
+    <div class="search-field">
+      <svg class="search-icon"><use href="#i-search"/></svg>
+      <input type="search" name="q" value="{{ search }}" class="input" placeholder="Search name or note&hellip;" aria-label="Search">
+    </div>
 
-  <button type="submit" class="btn">Filter</button>
-  {% if is_filtered %}
-    <a class="btn btn-ghost" href="{% url 'expense_list' %}?month={{ month_key }}">Clear</a>
-  {% endif %}
+    <select name="category" class="input toolbar-select" aria-label="Filter by category">
+      <option value="">All categories</option>
+      {% for category in categories %}
+        <option value="{{ category.pk }}" {% if selected_category == category.pk|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
+      {% endfor %}
+    </select>
 
-  <a class="btn btn-ghost toolbar-export" href="{% url 'expense_export' %}{% query_replace %}">
-    <svg><use href="#i-download"/></svg>Export CSV
-  </a>
-</form>
+    <div class="toolbar-actions">
+      <button type="submit" class="btn btn-primary">Apply</button>
+      {% if is_filtered %}
+        <a class="btn btn-ghost" href="{% url 'expense_list' %}?month={{ month_key }}">Clear</a>
+      {% endif %}
+      <a class="btn btn-ghost toolbar-export" href="{% url 'expense_export' %}{% query_replace %}">
+        <svg><use href="#i-download"/></svg><span>Export CSV</span>
+      </a>
+    </div>
+  </form>
+</div>
 
 {% if expenses %}
   <div class="sortbar" role="group" aria-label="Sort">
@@ -97,64 +118,32 @@
     {% endfor %}
   </div>
 
-  {% if group_by_day %}
-    <div class="card list-card">
+  <div class="card list-card">
+    {% if group_by_day %}
       {% for group in day_groups %}
         <div class="day-head">
-          <span class="day-label">{{ group.date|date:"l, j F" }}</span>
+          <span class="day-label">{{ group.date|date:"D, j M" }}</span>
           <span class="day-total mono-sm">{{ group.total|money }}</span>
         </div>
         <ul class="rows">
           {% for expense in group.items %}
-            <li class="row">
-              <span class="row-main">
-                <span class="row-name">{{ expense.name }}</span>
-                <span class="row-meta">
-                  <span class="tag" style="--tag: {{ expense.category.color }}">{{ expense.category.name }}</span>
-                  {% if expense.note %}<span class="note-flag" title="{{ expense.note }}">note</span>{% endif %}
-                </span>
-              </span>
-              <span class="row-amount mono">{{ expense.amount|money }}</span>
-              <span class="row-actions">
-                <a class="icon-btn icon-btn-sm" href="{% url 'expense_edit' expense.pk %}" aria-label="Edit {{ expense.name }}"><svg><use href="#i-edit"/></svg></a>
-                <a class="icon-btn icon-btn-sm icon-btn-danger" href="{% url 'expense_delete' expense.pk %}" aria-label="Delete {{ expense.name }}"><svg><use href="#i-trash"/></svg></a>
-              </span>
-            </li>
+            {% include "expenses/_expense_row.html" with expense=expense show_date=False %}
           {% endfor %}
         </ul>
       {% endfor %}
-      <div class="list-total">
-        <span>Total{% if is_filtered %} (filtered){% endif %}</span>
-        <span class="mono">{{ total|money }}</span>
-      </div>
-    </div>
-  {% else %}
-    <div class="card list-card">
-      <ul class="rows rows-flat">
+    {% else %}
+      <ul class="rows">
         {% for expense in expenses %}
-          <li class="row">
-            <span class="row-date mono-sm">{{ expense.date|date:"d M" }}</span>
-            <span class="row-main">
-              <span class="row-name">{{ expense.name }}</span>
-              <span class="row-meta">
-                <span class="tag" style="--tag: {{ expense.category.color }}">{{ expense.category.name }}</span>
-                {% if expense.note %}<span class="note-flag" title="{{ expense.note }}">note</span>{% endif %}
-              </span>
-            </span>
-            <span class="row-amount mono">{{ expense.amount|money }}</span>
-            <span class="row-actions">
-              <a class="icon-btn icon-btn-sm" href="{% url 'expense_edit' expense.pk %}" aria-label="Edit {{ expense.name }}"><svg><use href="#i-edit"/></svg></a>
-              <a class="icon-btn icon-btn-sm icon-btn-danger" href="{% url 'expense_delete' expense.pk %}" aria-label="Delete {{ expense.name }}"><svg><use href="#i-trash"/></svg></a>
-            </span>
-          </li>
+          {% include "expenses/_expense_row.html" with expense=expense show_date=True %}
         {% endfor %}
       </ul>
-      <div class="list-total">
-        <span>Total{% if is_filtered %} (filtered){% endif %}</span>
-        <span class="mono">{{ total|money }}</span>
-      </div>
+    {% endif %}
+
+    <div class="list-total">
+      <span>Total{% if is_filtered %} (filtered){% endif %}</span>
+      <span class="mono">{{ total|money }}</span>
     </div>
-  {% endif %}
+  </div>
 {% else %}
   <div class="card">
     <div class="empty">
