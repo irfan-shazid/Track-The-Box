@@ -56,3 +56,36 @@ class Expense(models.Model):
 
     def get_absolute_url(self):
         return f"{reverse('expense_list')}?month={self.month_key}"
+
+
+class Budget(models.Model):
+    """A spending target for one month.
+
+    One row per month, so a target can change month to month without
+    rewriting history. Absent row means no target set for that month.
+    """
+
+    # Always the first of the month — normalised in save() so a target set from
+    # any day lands on the same row the dashboard looks up.
+    month = models.DateField(unique=True, help_text="First day of the month this target applies to.")
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-month"]
+
+    def __str__(self):
+        return f"{self.month:%B %Y} target"
+
+    def save(self, *args, **kwargs):
+        self.month = self.month.replace(day=1)
+        return super().save(*args, **kwargs)
+
+    @property
+    def month_key(self):
+        return self.month.strftime("%Y-%m")

@@ -9,4 +9,5 @@ urlpatterns = [
     path("expenses/<int:pk>/edit/", views.expense_edit, name="expense_edit"),
     path("expenses/<int:pk>/delete/", views.expense_delete, name="expense_delete"),
     path("expenses/export/", views.expense_export_csv, name="expense_export"),
+    path("budget/", views.budget_edit, name="budget_edit"),
 ]

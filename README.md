@@ -15,9 +15,22 @@ Django 5.2 · PostgreSQL on [Neon](https://neon.tech) · deployed on Vercel · s
 | Add / edit | `/expenses/new/`, `/expenses/<id>/edit/` | `ModelForm`, native date picker, redirects back to that expense's month |
 | Delete | `/expenses/<id>/delete/` | Confirmation page; only `POST` actually deletes |
 | CSV export | `/expenses/export/?month=2026-09` | Exports the current month, honouring active filters |
-| Admin | `/admin/` | Both models, with `date_hierarchy` and category/date filters |
+| Monthly target | `/budget/?month=2026-09` | Set, change, or remove a spending target for one month |
+| Admin | `/admin/` | All three models, with `date_hierarchy` and category/date filters |
 
 Everything sits behind `@login_required`. There is no signup page by design — you create the one account with `createsuperuser`.
+
+### Monthly spending target
+
+Set a target for a month and the dashboard tracks it as you log expenses — how much is left, or how far over you've gone. The panel sits at the foot of the hero card, next to the projection it relates to.
+
+- **Under target:** shows what's left of the target, plus what that works out to per day for the days that remain (today included — on the 30th of a 31-day month there are two days left to budget for, not one).
+- **Over target:** shows the overspend as a positive number with its own wording and colour, rather than a negative "remaining".
+- **Colour states** at a glance: green under 85% of target, amber from 85%, red once over. One `--tone` variable per state drives the figure, meter and percentage together.
+- **Projection cross-check:** when the straight-line projection says you'll finish over target even though you aren't over yet, the projected figure gets an "over target" note.
+- The same figure appears on the expenses list, right where you land after logging something. It always reflects the **whole month**, even when a category filter is applied — otherwise a filtered view would make it look like there's budget left when there isn't.
+
+Targets are one row per month (`Budget`, with `month` unique and normalised to the first of the month), so a target can change month to month without rewriting history. No row means no target, which the UI treats as "offer to set one" rather than as a target of zero. Setting a target for a new month prefills with the most recent earlier one. The month always comes from the URL, never from the submitted form.
 
 ### Interface
 
@@ -154,6 +167,7 @@ Vercel's filesystem is read-only, so you cannot run `manage.py` there. Any futur
 - `MinValueValidator(Decimal("0.01"))` on amount — no zero or negative expenses.
 - `Meta.ordering = ["-date", "-created_at"]`, with an index on `date` and a composite index matching that ordering. Every query filters by date.
 - `Category` is `on_delete=PROTECT`, so you can't delete a category out from under existing expenses.
+- `Budget.month` is unique and normalised to day 1 in `save()`, so a target set from any day of the month lands on the row the dashboard looks up. Removing a target touches no expenses.
 - Seven categories (Food, Transport, Bills, Rent, Health, Shopping, Other) are seeded by a data migration, each with a hex colour used in the dashboard.
 
 Day subtotals on the list page call `.order_by()` with no arguments before `.values("date").annotate(...)`. An explicit ordering gets folded into the `GROUP BY`, and `-created_at` is unique per row, so without clearing it every expense comes back as its own one-row "day".

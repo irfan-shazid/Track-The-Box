@@ -9,10 +9,11 @@ from django.db.models import DecimalField, Q, Sum, Value
 from django.db.models.functions import Coalesce, TruncMonth
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
-from .forms import ExpenseForm, QuickExpenseForm
-from .models import Category, Expense
+from .forms import BudgetForm, ExpenseForm, QuickExpenseForm
+from .models import Budget, Category, Expense
 
 ZERO = Decimal("0.00")
 MONEY = DecimalField(max_digits=12, decimal_places=2)
@@ -74,6 +75,56 @@ def months_with_data():
         .order_by("-month")
     )
     return [{"date": r["month"], "key": r["month"].strftime("%Y-%m"), "total": q2(r["total"])} for r in rows]
+
+
+
+def budget_status(month, spent):
+    """Everything the UI needs about a month's spending target.
+
+    Returns None when no target is set for that month — the templates treat
+    that as "offer to set one" rather than as a zero target.
+    """
+    budget = Budget.objects.filter(month=month).first()
+    if budget is None:
+        return None
+
+    target = budget.amount
+    remaining = q2(target - spent)
+    over = remaining < ZERO
+
+    used_pct = (spent / target * Decimal("100")).quantize(Decimal("0.1")) if target else Decimal("0.0")
+
+    today = timezone.localdate()
+    days_in_month = calendar.monthrange(month.year, month.month)[1]
+    is_current = month_start(today) == month
+    # Days you can still spend on, today included — on the 30th of a 31-day
+    # month there are two days left to budget for, not one.
+    days_left = days_in_month - today.day + 1 if is_current else 0
+
+    # What's left, spread over the days that remain.
+    allowance = q2(remaining / days_left) if not over and days_left > 0 else None
+
+    if over:
+        state = "over"
+    elif used_pct >= Decimal("85"):
+        state = "warn"
+    else:
+        state = "ok"
+
+    return {
+        "target": target,
+        "spent": spent,
+        # Always positive; `over` says which label to use.
+        "remaining": abs(remaining),
+        "over": over,
+        "used_pct": used_pct,
+        # The meter bar is capped so a 300% overspend doesn't overflow its track.
+        "meter_pct": min(used_pct, Decimal("100")),
+        "state": state,
+        "allowance": allowance,
+        "days_left": days_left,
+        "is_current": is_current,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -153,6 +204,13 @@ def dashboard(request):
     largest = month_expenses.select_related("category").order_by("-amount").first()
     recent = month_expenses.select_related("category")[:5]
 
+    budget = budget_status(current, current_total)
+    # Only meaningful while the month is open: the straight-line projection
+    # says you will finish over target even though you are not over it yet.
+    projected_over = None
+    if budget and projected is not None and not budget["over"] and projected > budget["target"]:
+        projected_over = q2(projected - budget["target"])
+
     return render(
         request,
         "expenses/dashboard.html",
@@ -179,6 +237,8 @@ def dashboard(request):
             "days_in_month": days_in_month,
             "largest": largest,
             "recent": recent,
+            "budget": budget,
+            "projected_over": projected_over,
             "chart_labels": chart_labels,
             "chart_values": chart_values,
             "available_months": months_with_data(),
@@ -278,6 +338,9 @@ def expense_list(request):
             "opposite_dir": opposite,
             "sort_options": sort_options,
             "quick_form": QuickExpenseForm(initial={"date": timezone.localdate()}),
+            # Unfiltered month total, so the target line means the same thing
+            # here as on the dashboard even while a filter is applied.
+            "budget": budget_status(current, sum_amount(Expense.objects.filter(date__gte=start, date__lt=end))),
             "available_months": months_with_data(),
             "is_filtered": bool(search or category_id),
         },
@@ -403,3 +466,57 @@ def expense_export_csv(request):
     writer.writerow(["Total", "", "", "%.2f" % sum_amount(queryset), ""])
 
     return response
+
+
+# ---------------------------------------------------------------------------
+# Monthly spending target
+# ---------------------------------------------------------------------------
+
+
+@login_required
+def budget_edit(request):
+    """Set, change, or remove the spending target for one month."""
+    month = parse_month(request.GET.get("month") or request.POST.get("month"))
+    budget = Budget.objects.filter(month=month).first()
+    back = f"{reverse('dashboard')}?month={month:%Y-%m}"
+
+    if request.method == "POST":
+        if "remove" in request.POST:
+            if budget:
+                budget.delete()
+                messages.success(request, f"Removed the target for {month:%B %Y}.")
+            return redirect(back)
+
+        form = BudgetForm(request.POST, instance=budget)
+        if form.is_valid():
+            target = form.save(commit=False)
+            # The month comes from the URL, never from the submitted form.
+            target.month = month
+            target.save()
+            messages.success(request, f"Target for {month:%B %Y} saved.")
+            return redirect(back)
+    else:
+        initial = {}
+        if budget is None:
+            # Carry the most recent earlier target forward as a starting point;
+            # month-to-month targets rarely change much.
+            previous = Budget.objects.filter(month__lt=month).order_by("-month").first()
+            if previous:
+                initial["amount"] = previous.amount
+        form = BudgetForm(instance=budget, initial=initial)
+
+    start, end = month_range(month)
+    spent = sum_amount(Expense.objects.filter(date__gte=start, date__lt=end))
+
+    return render(
+        request,
+        "expenses/budget_form.html",
+        {
+            "form": form,
+            "month": month,
+            "month_key": month.strftime("%Y-%m"),
+            "budget": budget,
+            "spent": spent,
+            "back_url": back,
+        },
+    )

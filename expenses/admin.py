@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Expense
+from .models import Budget, Category, Expense
 
 
 @admin.register(Category)
@@ -27,3 +27,10 @@ class ExpenseAdmin(admin.ModelAdmin):
     list_select_related = ["category"]
     autocomplete_fields = ["category"]
     ordering = ["-date", "-created_at"]
+
+
+@admin.register(Budget)
+class BudgetAdmin(admin.ModelAdmin):
+    list_display = ["month", "amount", "updated_at"]
+    ordering = ["-month"]
+    date_hierarchy = "month"

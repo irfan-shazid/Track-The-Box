@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load money %}
+
+{% block title %}Monthly target &middot; {{ month|date:"F Y" }}{% endblock %}
+
+{% block content %}
+<div class="narrow">
+  <div class="page-head">
+    <div class="page-head-text">
+      <p class="eyebrow">{% if budget %}Change target{% else %}New target{% endif %}</p>
+      <h1>{{ month|date:"F Y" }}</h1>
+    </div>
+    <a class="btn btn-ghost" href="{{ back_url }}"><svg><use href="#i-left"/></svg>Back</a>
+  </div>
+
+  <form class="card form" method="post" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="month" value="{{ month_key }}">
+
+    {% if form.non_field_errors %}
+      <p class="form-error-banner">{{ form.non_field_errors|join:" " }}</p>
+    {% endif %}
+
+    <div class="field">
+      <label for="{{ form.amount.id_for_label }}">
+        How much do you want to spend in {{ month|date:"F" }}?
+      </label>
+      <div class="input-affix">
+        <span class="affix">{% currency_symbol %}</span>
+        {{ form.amount }}
+      </div>
+      {% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      <p class="muted field-hint">
+        You&rsquo;ve spent <strong class="mono">{{ spent|money }}</strong> in {{ month|date:"F" }} so far.
+        The dashboard will show what&rsquo;s left, or how far over you are.
+      </p>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary btn-lg">
+        {% if budget %}Save target{% else %}Set target{% endif %}
+      </button>
+      <a class="btn btn-ghost" href="{{ back_url }}">Cancel</a>
+    </div>
+  </form>
+
+  {% if budget %}
+    {# Separate form: removing is a different action, not a variant of saving. #}
+    <form class="card danger-strip" method="post">
+      {% csrf_token %}
+      <input type="hidden" name="month" value="{{ month_key }}">
+      <div>
+        <strong>Remove this target</strong>
+        <p class="muted">{{ month|date:"F Y" }} goes back to having no target. No expenses are touched.</p>
+      </div>
+      <button type="submit" name="remove" value="1" class="btn btn-danger-ghost">
+        <svg><use href="#i-trash"/></svg>Remove
+      </button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,7 +1,7 @@
 from django import forms
 from django.utils import timezone
 
-from .models import Category, Expense
+from .models import Budget, Category, Expense
 
 
 class ExpenseForm(forms.ModelForm):
@@ -43,3 +43,24 @@ class QuickExpenseForm(ExpenseForm):
 
     class Meta(ExpenseForm.Meta):
         fields = ["date", "name", "amount", "category"]
+
+
+class BudgetForm(forms.ModelForm):
+    """Just the amount. The month comes from the URL, not the user."""
+
+    class Meta:
+        model = Budget
+        fields = ["amount"]
+        widgets = {
+            "amount": forms.NumberInput(
+                attrs={
+                    "class": "input",
+                    "step": "0.01",
+                    "min": "0.01",
+                    "inputmode": "decimal",
+                    "placeholder": "0.00",
+                    "autofocus": True,
+                }
+            ),
+        }
+        labels = {"amount": "Monthly target"}

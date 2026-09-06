@@ -37,6 +37,15 @@
     <span class="muted">&middot; {{ count }} expense{{ count|pluralize }}</span>
   </span>
   <span class="total-banner-value mono">{{ total|money }}</span>
+  {% if budget %}
+    <span class="total-banner-budget budget-{{ budget.state }}">
+      {% if budget.over %}
+        <strong class="mono">{{ budget.remaining|money }}</strong> over the {{ budget.target|money }} target
+      {% else %}
+        <strong class="mono">{{ budget.remaining|money }}</strong> left of {{ budget.target|money }}
+      {% endif %}
+    </span>
+  {% endif %}
 </div>
 
 {# Quick add. Logging something in three seconds is the whole point of the app. #}

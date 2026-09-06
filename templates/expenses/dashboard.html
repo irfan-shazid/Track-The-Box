@@ -61,7 +61,10 @@
     {% if projected is not None %}
       <div>
         <dt>Projected month end</dt>
-        <dd class="mono">{{ projected|money }}</dd>
+        <dd class="mono">
+          {{ projected|money }}
+          {% if projected_over %}<span class="hint-over">&nbsp;{{ projected_over|money }} over target</span>{% endif %}
+        </dd>
       </div>
     {% else %}
       <div>
@@ -77,6 +80,52 @@
       </dd>
     </div>
   </dl>
+
+  <section class="budget budget-{{ budget.state|default:'none' }}">
+    {% if budget %}
+      <div class="budget-head">
+        <span class="budget-label">Monthly target</span>
+        <a class="budget-edit" href="{% url 'budget_edit' %}?month={{ month_key }}">
+          <svg><use href="#i-edit"/></svg><span>Edit</span>
+        </a>
+      </div>
+
+      <p class="budget-headline">
+        {% if budget.over %}
+          <span class="budget-figure">{{ budget.remaining|money }}</span>
+          <span class="budget-caption">over your {{ budget.target|money }} target</span>
+        {% else %}
+          <span class="budget-figure">{{ budget.remaining|money }}</span>
+          <span class="budget-caption">left of {{ budget.target|money }}</span>
+        {% endif %}
+      </p>
+
+      <div class="budget-meter">
+        <span class="meter"><span style="width: {{ budget.meter_pct }}%"></span></span>
+        <span class="budget-pct mono-sm">{{ budget.used_pct }}%</span>
+      </div>
+
+      <p class="budget-foot muted">
+        {% if budget.over %}
+          You&rsquo;ve spent {{ budget.spent|money }} of {{ budget.target|money }}.
+        {% elif budget.allowance %}
+          {{ budget.allowance|money }} a day for the {{ budget.days_left }} day{{ budget.days_left|pluralize }} left.
+        {% else %}
+          Spent {{ budget.spent|money }} of {{ budget.target|money }}.
+        {% endif %}
+      </p>
+    {% else %}
+      <div class="budget-empty">
+        <div>
+          <span class="budget-label">Monthly target</span>
+          <p class="muted budget-empty-hint">Set one to track what&rsquo;s left as you spend.</p>
+        </div>
+        <a class="btn btn-primary" href="{% url 'budget_edit' %}?month={{ month_key }}">
+          <svg><use href="#i-target"/></svg>Set target
+        </a>
+      </div>
+    {% endif %}
+  </section>
 </section>
 
 <div class="two-col">

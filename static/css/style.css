@@ -658,6 +658,80 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: .55; }
 .quick-grid .btn { width: 100%; min-height: 3rem; }
 .quick-hint { margin: .65rem 0 0; font-size: .8rem; }
 
+/* ====================================================== monthly target === */
+
+/* Spans the whole hero card, under both columns. Colour is driven by one
+   --tone variable per state so the meter, figure and border stay in step. */
+.budget {
+  --tone: var(--accent);
+  --tone-soft: var(--accent-soft);
+  grid-column: 1 / -1;
+  margin-top: .35rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.budget-ok    { --tone: var(--down);   --tone-soft: var(--down-soft); }
+.budget-warn  { --tone: var(--warn-text); --tone-soft: var(--warn-soft); }
+.budget-over  { --tone: var(--up);     --tone-soft: var(--up-soft); }
+
+.budget-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.budget-label {
+  font-size: .72rem; font-weight: 660; text-transform: uppercase;
+  letter-spacing: .09em; color: var(--text-muted);
+}
+.budget-edit {
+  display: inline-flex; align-items: center; gap: .3rem;
+  min-height: var(--tap); padding-inline: .5rem; margin-right: -.5rem;
+  font-size: .82rem; font-weight: 550; color: var(--text-muted);
+}
+.budget-edit:hover { color: var(--accent); text-decoration: none; }
+
+.budget-headline {
+  display: flex; align-items: baseline; gap: .45rem; flex-wrap: wrap;
+  margin: .35rem 0 .6rem;
+}
+.budget-figure {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  /* Shrinks on a narrow phone rather than wrapping mid-number. */
+  font-size: clamp(1.35rem, 6.5vw, 1.7rem);
+  font-weight: 680; letter-spacing: -.03em; line-height: 1.1;
+  color: var(--tone);
+}
+.budget-caption { font-size: .88rem; color: var(--text-muted); }
+
+.budget-meter { display: flex; align-items: center; gap: .6rem; }
+.budget-meter .meter > span { background: var(--tone); }
+.budget-pct { color: var(--tone); font-weight: 620; width: 3.4rem; text-align: right; flex: none; }
+
+.budget-foot { margin: .55rem 0 0; font-size: .84rem; }
+
+.budget-empty { display: flex; flex-direction: column; gap: .75rem; }
+.budget-empty-hint { margin: .15rem 0 0; font-size: .84rem; }
+.budget-empty .btn { width: 100%; }
+
+/* "…12.00 over target" trailing the projection figure. */
+.hint-over { color: var(--up); font-family: var(--sans); font-size: .78rem; font-weight: 600; }
+
+/* The same figure, condensed, on the expenses list banner. */
+.total-banner-budget {
+  flex-basis: 100%;
+  font-size: .84rem;
+  color: var(--text-muted);
+  padding-top: .55rem;
+  border-top: 1px solid color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.total-banner-budget strong { color: var(--tone, var(--text)); }
+.total-banner-budget.budget-ok   { --tone: var(--down); }
+.total-banner-budget.budget-warn { --tone: var(--warn-text); }
+.total-banner-budget.budget-over { --tone: var(--up); }
+
+/* Remove-target strip on the budget page. */
+.danger-strip { display: flex; flex-direction: column; gap: .75rem; }
+.danger-strip p { margin: .15rem 0 0; font-size: .84rem; }
+.danger-strip .btn { width: 100%; }
+
+.field-hint { margin: .35rem 0 0; font-size: .84rem; line-height: 1.45; }
+
 /* ========================================================= empty state === */
 
 .empty { text-align: center; padding: 2.25rem .75rem; color: var(--text-muted); }
@@ -786,6 +860,11 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: .55; }
 
   .row-link { padding-left: 1.25rem; }
   .day-head, .list-total { padding-inline: 1.25rem; }
+
+  .budget-empty { flex-direction: row; align-items: center; justify-content: space-between; }
+  .budget-empty .btn { width: auto; flex: none; }
+  .danger-strip { flex-direction: row; align-items: center; justify-content: space-between; }
+  .danger-strip .btn { width: auto; flex: none; }
 
   .login-card { padding: 2.1rem; }
   .danger-card { padding: 2rem 1.5rem; }
